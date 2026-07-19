@@ -7,7 +7,7 @@ pool:
 variables:
   nodeVersion: '20.x'
 
-  # Azure Service Connection
+  # Azure Resource Manager Service Connection
   azureSubscription: 'azure-service-connection'
 
   # Docker Hub Service Connection
@@ -16,28 +16,35 @@ variables:
   # Docker Hub Repository
   imageRepository: 'khalidale/nextjs-app'
 
+  # Dockerfile Location
   dockerfilePath: 'Dockerfile'
 
+  # Image Tag
   imageTag: '$(Build.BuildId)'
 
   # Azure Web App Name
   webAppName: 'my-nextjs-app'
 
+#######################################################
+# Stage 1 - Build Next.js Application
+#######################################################
+
 stages:
 
-# =========================================
-# Stage 1 - Build Application
-# =========================================
 - stage: Build
   displayName: Build Application
 
   jobs:
+
   - job: BuildApplication
+    displayName: Build Next.js
 
     steps:
+
     - checkout: self
 
     - task: NodeTool@0
+      displayName: Install Node.js
       inputs:
         versionSpec: $(nodeVersion)
 
@@ -49,69 +56,54 @@ stages:
         npm run build
       displayName: Build Next.js
 
-# =========================================
-# Stage 2 - Build Docker Image
-# =========================================
-- stage: DockerBuild
-  displayName: Build Docker Image
+#######################################################
+# Stage 2 - Build & Push Docker Image
+#######################################################
+
+- stage: Docker
+  displayName: Build & Push Docker Image
 
   dependsOn: Build
 
   jobs:
-  - job: BuildDocker
+
+  - job: DockerBuildPush
+    displayName: Build and Push Image
 
     steps:
+
     - checkout: self
 
     - task: Docker@2
-      displayName: Build Docker Image
+      displayName: Build and Push Docker Image
+
       inputs:
-        command: build
+        command: buildAndPush
+        containerRegistry: $(dockerRegistryServiceConnection)
         repository: $(imageRepository)
         dockerfile: $(dockerfilePath)
         tags: |
           $(imageTag)
           latest
 
-# =========================================
-# Stage 3 - Push Docker Image
-# =========================================
-- stage: DockerPush
-  displayName: Push Docker Image
+#######################################################
+# Stage 3 - Deploy to Azure Web App
+#######################################################
 
-  dependsOn: DockerBuild
-
-  jobs:
-  - job: PushDocker
-
-    steps:
-    - checkout: self
-
-    - task: Docker@2
-      displayName: Push Docker Image
-      inputs:
-        command: push
-        containerRegistry: $(dockerRegistryServiceConnection)
-        repository: $(imageRepository)
-        tags: |
-          $(imageTag)
-          latest
-
-# =========================================
-# Stage 4 - Deploy to Azure Web App
-# =========================================
 - stage: Deploy
   displayName: Deploy to Azure Web App
 
-  dependsOn: DockerPush
+  dependsOn: Docker
 
   jobs:
+
   - job: DeployContainer
+    displayName: Deploy Container
 
     steps:
 
     - task: AzureWebAppContainer@1
-      displayName: Deploy Container to Azure Web App
+      displayName: Deploy to Azure Web App
 
       inputs:
         azureSubscription: $(azureSubscription)
