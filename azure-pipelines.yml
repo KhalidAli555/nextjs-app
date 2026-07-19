@@ -23,7 +23,7 @@ variables:
   imageTag: '$(Build.BuildId)'
 
   # Azure Web App Name
-  webAppName: 'my-nextjs-app'
+  webAppName: 'nextjs-webapp'
 
 #######################################################
 # Stage 1 - Build Next.js Application
