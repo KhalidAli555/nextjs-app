@@ -1,21 +1,140 @@
-# Node.js
-# Build a general Node.js project with npm.
-# Add steps that analyze code, save build artifacts, deploy, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
-
 trigger:
 - main
 
 pool:
   vmImage: ubuntu-latest
 
-steps:
-- task: NodeTool@0
-  inputs:
-    versionSpec: '20.x'
-  displayName: 'Install Node.js'
+variables:
+  nodeVersion: '20.x'
 
-- script: |
-    npm install
-    npm run build
-  displayName: 'npm install and build'
+  # Docker Hub Service Connection
+  dockerRegistryServiceConnection: 'dockerhub-service-connection'
+
+  # Azure Service Connection
+  azureSubscription: 'azure-service-connection'
+
+  # Docker Image
+  imageRepository: 'khalidale/nextjs-app'
+
+  dockerfilePath: 'Dockerfile'
+
+  imageTag: '$(Build.BuildId)'
+
+  # Azure Web App Name
+  webAppName: 'my-nextjs-app'
+
+#########################################################
+# Stage 1 - Build Application
+#########################################################
+
+stages:
+
+- stage: Build
+  displayName: Build Application
+
+  jobs:
+
+  - job: BuildApplication
+
+    steps:
+
+    - checkout: self
+
+    - task: NodeTool@0
+      inputs:
+        versionSpec: $(nodeVersion)
+
+    - script: |
+        npm install
+      displayName: Install Dependencies
+
+    - script: |
+        npm run build
+      displayName: Build Next.js Application
+
+#########################################################
+# Stage 2 - Build Docker Image
+#########################################################
+
+- stage: DockerBuild
+  displayName: Build Docker Image
+
+  dependsOn: Build
+
+  jobs:
+
+  - job: DockerBuildJob
+
+    steps:
+
+    - checkout: self
+
+    - task: Docker@2
+      displayName: Build Docker Image
+      inputs:
+        command: build
+        repository: $(imageRepository)
+        dockerfile: $(dockerfilePath)
+        tags: |
+          $(imageTag)
+          latest
+
+#########################################################
+# Stage 3 - Push Docker Image
+#########################################################
+
+- stage: DockerPush
+  displayName: Push Docker Image
+
+  dependsOn: DockerBuild
+
+  jobs:
+
+  - job: DockerPushJob
+
+    steps:
+
+    - checkout: self
+
+    - task: Docker@2
+      displayName: Login & Push Docker Image
+      inputs:
+        command: push
+        containerRegistry: $(dockerRegistryServiceConnection)
+        repository: $(imageRepository)
+        tags: |
+          $(imageTag)
+          latest
+
+#########################################################
+# Stage 4 - Deploy to Azure Web App
+#########################################################
+
+- stage: Deploy
+  displayName: Deploy to Azure Web App
+
+  dependsOn: DockerPush
+
+  jobs:
+
+  - deployment: DeployContainer
+
+    environment: Production
+
+    strategy:
+
+      runOnce:
+
+        deploy:
+
+          steps:
+
+          - task: AzureWebAppContainer@1
+            displayName: Deploy Container
+
+            inputs:
+              azureSubscription: $(azureSubscription)
+              appName: $(webAppName)
+
+              containers: |
+                $(imageRepository):$(imageTag)
