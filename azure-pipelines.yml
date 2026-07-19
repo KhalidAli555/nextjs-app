@@ -5,9 +5,8 @@ pool:
   vmImage: ubuntu-latest
 
 variables:
-  nodeVersion: '20.x'
 
-  # Azure Resource Manager Service Connection
+  # Azure Service Connection
   azureSubscription: 'azure-service-connection'
 
   # Docker Hub Service Connection
@@ -16,7 +15,7 @@ variables:
   # Docker Hub Repository
   imageRepository: 'khalidale/nextjs-app'
 
-  # Dockerfile Location
+  # Dockerfile
   dockerfilePath: 'Dockerfile'
 
   # Image Tag
@@ -26,44 +25,13 @@ variables:
   webAppName: 'nextjs-webapp'
 
 #######################################################
-# Stage 1 - Build Next.js Application
+# Stage 1 - Build Docker Image & Push
 #######################################################
 
 stages:
 
-- stage: Build
-  displayName: Build Application
-
-  jobs:
-
-  - job: BuildApplication
-    displayName: Build Next.js
-
-    steps:
-
-    - checkout: self
-
-    - task: NodeTool@0
-      displayName: Install Node.js
-      inputs:
-        versionSpec: $(nodeVersion)
-
-    - script: |
-        npm install
-      displayName: Install Dependencies
-
-    - script: |
-        npm run build
-      displayName: Build Next.js
-
-#######################################################
-# Stage 2 - Build & Push Docker Image
-#######################################################
-
 - stage: Docker
   displayName: Build & Push Docker Image
-
-  dependsOn: Build
 
   jobs:
 
@@ -76,7 +44,6 @@ stages:
 
     - task: Docker@2
       displayName: Build and Push Docker Image
-
       inputs:
         command: buildAndPush
         containerRegistry: $(dockerRegistryServiceConnection)
@@ -87,7 +54,7 @@ stages:
           latest
 
 #######################################################
-# Stage 3 - Deploy to Azure Web App
+# Stage 2 - Deploy
 #######################################################
 
 - stage: Deploy
