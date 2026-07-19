@@ -79,7 +79,7 @@ const Navbar = ({onLoginClick,onSignupClick}) => {
             ))}
             <button onClick={onLoginClick} className="w-[130px] border border-white py-2 rounded-full ">Log In</button>
             <button onClick={onSignupClick}
-            className="w-[130px] bg-lime-400 text-black py-2 rounded-full">Sign Up</button>
+            className="w-[130px] bg-lime-400 text-black py-2 rounded-full">Signup Azure</button>
             </div>
           </motion.div>
         )}
