@@ -14,7 +14,7 @@ variables:
   dockerRegistryServiceConnection: 'dockerhub-service-connection'
 
   # Docker Hub Repository
-  imageRepository: 'yourdockerhubusername/nextjs-app'
+  imageRepository: 'khalidale/nextjs-app'
 
   dockerfilePath: 'Dockerfile'
 
